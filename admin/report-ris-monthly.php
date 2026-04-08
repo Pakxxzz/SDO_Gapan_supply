@@ -104,9 +104,21 @@ $result = $conn->query($sql);
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function viewMonthlyDetail(month, year) {
-            // Redirects to the standard stockOut page filtered by that specific month
+            // 1. Format the first day of the month
             const firstDay = `${year}-${String(month).padStart(2, '0')}-01`;
-            const lastDay = new Date(year, month, 0).toISOString().split('T')[0];
+
+            // 2. Get the last day of the month
+            // Setting day to 0 in the Date constructor gets the last day of the PREVIOUS month.
+            // Since JS months are 0-indexed, passing 'month' directly here works correctly.
+            const lastDateObj = new Date(year, month, 0);
+
+            // 3. Manually extract Year, Month, and Day to avoid UTC timezone shifts
+            const y = lastDateObj.getFullYear();
+            const m = String(lastDateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(lastDateObj.getDate()).padStart(2, '0');
+
+            const lastDay = `${y}-${m}-${d}`;
+
             window.location.href = `stockOut.php?dateFrom=${firstDay}&dateTo=${lastDay}`;
         }
     </script>

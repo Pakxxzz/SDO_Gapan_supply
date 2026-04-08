@@ -341,32 +341,32 @@ if (!empty($rawTo)) {
             <table class="min-w-full table-fixed border-separate border-spacing-0">
                 <thead>
                     <tr>
-                        <th>Stock No.</th>
-                        <th>Item Description</th>
-                        <th>Unit</th>
-                        <th>Beginning</th>
-                        <th>Stock In</th>
-                        <th>Stock Out</th>
-                        <th>Returns</th>
-                        <th>Ending</th>
-                        <th># Align</th>
+                        <th class="px-4 py-2 text-left">Stock No.</th>
+                        <th class="px-4 py-2 text-left">Item Description</th>
+                        <th class="px-4 py-2 text-left">Unit</th>
+                        <th class="px-4 py-2 text-left">Beginning</th>
+                        <th class="px-4 py-2 text-left">Stock In</th>
+                        <th class="px-4 py-2 text-left">Stock Out</th>
+                        <th class="px-4 py-2 text-left">Returns</th>
+                        <th class="px-4 py-2 text-left">Ending</th>
+                        <th class="px-4 py-2 text-left"># Align</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="table-body">
                     <?php if ($result && $result->num_rows > 0): ?>
                         <?php while ($row = $result->fetch_assoc()):
                             $beginningQty = isset($beginningBalances[$row['ITEM_ID']]) ? $beginningBalances[$row['ITEM_ID']] : 0;
                             $endingInventory = $beginningQty + $row['total_received'] - $row['total_dispatched'] + $row['total_returns'];
                             $unit = $row['ITEM_UNIT'] ?: ($row['ITEM_UOM'] ? $row['ITEM_UOM'] . ' pcs' : 'pcs');
                             ?>
-                            <tr>
-                                <td class="font-mono text-xs"><?= htmlspecialchars($row['ITEM_CODE']) ?></td>
-                                <td><?= htmlspecialchars($row['ITEM_DESC']) ?></td>
-                                <td><?= htmlspecialchars($unit) ?></td>
-                                <td><?= number_format($beginningQty) ?></td>
-                                <td class="text-green-600">+<?= number_format($row['total_received']) ?></td>
-                                <td class="text-red-600">-<?= number_format($row['total_dispatched']) ?></td>
-                                <td class="text-orange-600">+<?= number_format($row['total_returns']) ?></td>
+                            <tr class="hover:bg-gray-200 border-b border-gray-300">
+                                <td class="px-4 py-2"><?= htmlspecialchars($row['ITEM_CODE']) ?></td>
+                                <td class="px-4 py-2"><?= htmlspecialchars($row['ITEM_DESC']) ?></td>
+                                <td class="px-4 py-2"><?= htmlspecialchars($unit) ?></td>
+                                <td class="px-4 py-2"><?= number_format($beginningQty) ?></td>
+                                <td class="px-4 py-2 text-green-600">+<?= number_format($row['total_received']) ?></td>
+                                <td class="px-4 py-2 text-red-600">-<?= number_format($row['total_dispatched']) ?></td>
+                                <td class="px-4 py-2 text-orange-600">+<?= number_format($row['total_returns']) ?></td>
                                 <td class="font-medium <?= $endingInventory < 0 ? 'text-red-600' : 'text-blue-600' ?>">
                                     <?= number_format($endingInventory) ?>
                                 </td>

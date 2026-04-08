@@ -33,7 +33,7 @@ $items = [];
 $itemQuery = "SELECT ITEM_ID, ITEM_CODE, ITEM_DESC 
               FROM item 
               WHERE ITEM_IS_ARCHIVED = 0 
-              ORDER BY ITEM_DESC";
+              ORDER BY ITEM_CODE ASC";
 $itemResult = $conn->query($itemQuery);
 while ($row = $itemResult->fetch_assoc()) {
     $items[] = $row;

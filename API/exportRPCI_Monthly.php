@@ -10,10 +10,9 @@ use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
 include "../API/db-connector.php";
 
-$month = isset($_GET['month']) ? intval($_GET['month']) : date('m') - 1;
+$month = isset($_GET['month']) ? intval($_GET['month']) : date('m');
 $year = isset($_GET['year']) ? intval($_GET['year']) : date('Y');
 
-// Calculate snapshot date (first day of next month)
 $snapshot_month = $month + 1;
 $snapshot_year = $year;
 if ($snapshot_month > 12) {
@@ -21,13 +20,15 @@ if ($snapshot_month > 12) {
     $snapshot_year = $year + 1;
 }
 $snapshot_date = sprintf("%04d-%02d-01", $snapshot_year, $snapshot_month);
-$monthName = strtoupper(date("F", mktime(0, 0, 0, $month, 10)));
+$monthName = date("F", mktime(0, 0, 0, $month, 10));
+$lastDayOfMonth = date("t", mktime(0, 0, 0, $month, 1, $year));
 
-// Fetch physical count data using snapshot date - ONLY item details and quantity
+// Fetch Data
 $sql = "SELECT 
             i.ITEM_CODE,
             i.ITEM_DESC,
             i.ITEM_UNIT,
+            b.HISTORICAL_UNIT_COST as ITEM_COST,
             b.SYSTEM_QUANTITY as PHYSICAL_COUNT
         FROM baseline_inventory b
         JOIN item i ON b.ITEM_ID = i.ITEM_ID
@@ -39,180 +40,176 @@ $stmt->bind_param("s", $snapshot_date);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Check if data exists
-if ($result->num_rows === 0) {
-    die("No physical count data found for $monthName $year");
-}
-
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
-$spreadsheet->getDefaultStyle()->getFont()->setName('Times New Roman')->setSize(10);
-$sheet->getPageSetup()->setHorizontalCentered(true);
-// $sheet->getPageSetup()->setVerticalCentered(true);
+$spreadsheet->getDefaultStyle()->getFont()->setName('Times New Roman')->setSize(11);
 
-// Set Footer
-$sheet->getHeaderFooter()->setOddFooter(
-    '&LReport of Physical Count of Inventories (RPCI)' .
-    '&CPage &P'
-);
+// --- 1. Top Header Section ---
+$sheet->setCellValue('J1', 'Appendix 66');
+$sheet->getStyle('J1')->getFont()->setItalic(true)->setSize(12);
 
-// --- Header Section ---
-$sheet->mergeCells('A1:D1');
-$sheet->setCellValue('A1', 'Republic of the Philippines');
-$sheet->getStyle('A1')->getFont()->setBold(true)->setSize(12);
-$sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-$sheet->mergeCells('A2:D2');
-$sheet->setCellValue('A2', 'Department of Education');
-$sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
+$sheet->mergeCells('A2:J2');
+$sheet->setCellValue('A2', 'REPORT ON THE PHYSICAL COUNT OF INVENTORIES');
+$sheet->getStyle('A2')->getFont()->setBold(true)->setSize(14);
 $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-$sheet->mergeCells('A3:D3');
-$sheet->setCellValue('A3', 'SCHOOLS DIVISION OFFICE - GAPAN CITY');
-$sheet->getStyle('A3')->getFont()->setBold(true)->setSize(12);
+$sheet->mergeCells('A3:J3');
+$sheet->setCellValue('A3', 'Office Supplies Inventory');
 $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-$sheet->mergeCells('A4:D4');
-$sheet->setCellValue('A4', 'REPORT OF PHYSICAL COUNT OF INVENTORIES (RPCI)');
-$sheet->getStyle('A4')->getFont()->setBold(true)->setSize(14);
+$sheet->mergeCells('A4:J4');
+$sheet->setCellValue('A4', "as at $monthName $lastDayOfMonth, $year");
 $sheet->getStyle('A4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-$sheet->mergeCells('A5:D5');
-$sheet->setCellValue('A5', "As of " . date('F d, Y', strtotime($snapshot_date)));
-$sheet->getStyle('A5')->getFont()->setBold(true)->setSize(11);
-$sheet->getStyle('A5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->setCellValue('A5', 'Fund Cluster : 101101');
+$sheet->getStyle('A5')->getFont()->setBold(true);
 
-$sheet->mergeCells('A6:D6');
-$sheet->setCellValue('A6', "For the Month of: " . date('F Y', mktime(0, 0, 0, $month, 10)));
-$sheet->getStyle('A6')->getFont()->setBold(true)->setSize(11);
-$sheet->getStyle('A6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->mergeCells('A6:J6');
+$sheet->setCellValue('A6', 'For which Christopher G. Paguio, AO IV-Supply Officer, Schools Division Office of Gapan City, is accountable, having assumed such accountability on April 28, 2025.');
+$sheet->getStyle('A6')->getAlignment()->setWrapText(true);
 
-// Empty row
-$sheet->setCellValue('A7', '');
-
-// --- Main Table Headers - ONLY 4 columns ---
+// --- 2. Table Header Section ---
 $headers = [
-    'A8' => 'Stock No.',
-    'B8' => 'Item Description',
-    'C8' => 'Unit',
-    'D8' => 'Quantity'
+    'A8' => 'Article',
+    'B8' => 'Description',
+    'C8' => 'Stock Number',
+    'D8' => 'Unit of Measure',
+    'E8' => 'Unit Value',
+    'F8' => 'Balance Per Card',
+    'G8' => 'On Hand Per Count',
+    'H8' => 'Shortage/Overage',
+    'I8' => 'TOTAL',
+    'J8' => 'Remarks'
 ];
 
-foreach ($headers as $cell => $value) {
-    $sheet->setCellValue($cell, $value);
+foreach ($headers as $cell => $val) {
+    $sheet->setCellValue($cell, $val);
 }
 
-// Style Headers
-$headerStyle = [
+// Sub-headers for Quantity/Value
+$sheet->setCellValue('F9', '(Quantity)')->getStyle('F9')->getFont()->setBold(false)->setSize(10);
+$sheet->setCellValue('G9', '(Quantity)')->getStyle('G9')->getFont()->setBold(false)->setSize(10);
+$sheet->setCellValue('H9', 'Quantity')->getStyle('H9')->getFont()->setBold(false)->setSize(10);
+$sheet->setCellValue('I9', 'Value')->getStyle('I9')->getFont()->setBold(false)->setSize(10);
+
+$styleHeader = [
     'font' => ['bold' => true, 'size' => 10],
     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-    'fill' => [
-        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-        'startColor' => ['rgb' => 'E2E8F0']
-    ]
+    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
 ];
-$sheet->getStyle('A8:D8')->applyFromArray($headerStyle);
 
-// --- Populate Data ---
-$rowNum = 9;
-$total_quantity = 0;
+// Merge the first 5 columns vertically so they span both header rows (8 and 9)
+foreach (range('A', 'E') as $col) {
+    $sheet->mergeCells("{$col}8:{$col}9");
+}
+$sheet->mergeCells("J8:J9"); // Remarks also spans two rows
+
+$sheet->getStyle('A8:J9')->applyFromArray($styleHeader);
+$sheet->getStyle('A8:J9')->applyFromArray($styleHeader);
+
+// --- 3. Populate Data ---
+$rowNum = 10;
+$totalInventoryValue = 0;
+$sheet->setCellValue('A' . $rowNum, 'Office Supplies');
 
 while ($row = $result->fetch_assoc()) {
-    $quantity = $row['PHYSICAL_COUNT'];
-    $total_quantity += $quantity;
-    
-    $sheet->setCellValue('A' . $rowNum, $row['ITEM_CODE']);
+    $qty = $row['PHYSICAL_COUNT'];
+    $unitCost = $row['ITEM_COST'];
+    $totalItemValue = $qty * $unitCost;
+    $totalInventoryValue += $totalItemValue;
+
+
     $sheet->setCellValue('B' . $rowNum, $row['ITEM_DESC']);
-    $sheet->setCellValue('C' . $rowNum, $row['ITEM_UNIT']);
-    $sheet->setCellValue('D' . $rowNum, $quantity);
-    
-    // Apply borders and alignment
-    $sheet->getStyle("A$rowNum:D$rowNum")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-    $sheet->getStyle("A$rowNum")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    $sheet->getStyle("C$rowNum:D$rowNum")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    $sheet->getStyle("B$rowNum")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-    
+    $sheet->setCellValue('C' . $rowNum, $row['ITEM_CODE']);
+    $sheet->setCellValue('D' . $rowNum, $row['ITEM_UNIT']);
+    $sheet->setCellValue('E' . $rowNum, '₱' . number_format($unitCost, 2));
+    $sheet->setCellValue('F' . $rowNum, $qty); // Balance Per Card
+    $sheet->setCellValue('G' . $rowNum, $qty); // On Hand Per Count
+    $sheet->setCellValue('H' . $rowNum, 0);   // Shortage
+    $sheet->setCellValue('I' . $rowNum, '₱' . number_format($totalItemValue, 2));
+    $sheet->setCellValue('J' . $rowNum, 'in good condition');
+
+    $sheet->getStyle("A$rowNum:J$rowNum")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+    $sheet->getStyle("A$rowNum:J$rowNum")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle("E$rowNum")->getNumberFormat()->setFormatCode('#,##0.00');
+    $sheet->getStyle("I$rowNum")->getNumberFormat()->setFormatCode('#,##0.00');
     $rowNum++;
 }
 
-// --- Totals Row ---
-$sheet->setCellValue('A' . $rowNum, 'TOTAL:');
-$sheet->mergeCells('A' . $rowNum . ':C' . $rowNum);
-$sheet->setCellValue('D' . $rowNum, $total_quantity);
+// --- 4. Total Row ---
+$sheet->mergeCells("A$rowNum:H$rowNum");
+$sheet->setCellValue("A$rowNum", "TOTAL");
+$sheet->setCellValue("I$rowNum", $totalInventoryValue); // Fixed variable name
+$sheet->getStyle("A$rowNum:J$rowNum")->getFont()->setBold(true);
+$sheet->getStyle("A$rowNum:J$rowNum")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+$sheet->getStyle("I$rowNum")->getNumberFormat()->setFormatCode('#,##0.00');
+$sheet->getStyle("A$rowNum")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
-$sheet->getStyle('A' . $rowNum . ':D' . $rowNum)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-$sheet->getStyle('A' . $rowNum)->getFont()->setBold(true);
-$sheet->getStyle('D' . $rowNum)->getFont()->setBold(true);
-
+// --- Signatories Footer ---
 $rowNum += 2;
+// Row 1: Titles
+$sheet->setCellValue('A' . $rowNum, 'Certified Correct by:');
+$sheet->setCellValue('D' . $rowNum, 'Approved by:');
+$sheet->setCellValue('I' . $rowNum, 'Verified by:');
+$sheet->getStyle("A$rowNum:J$rowNum")->getFont()->setBold(true);
 
-// --- Signatories Section ---
-$signRow = $rowNum;
+$rowNum += 1;
+// Row 2: Names
+$sheet->setCellValue('B' . $rowNum, 'CHRISTOPHER G. PAGUIO');
+$sheet->mergeCells('E' . $rowNum . ':H' . $rowNum);
+$sheet->setCellValue('E' . $rowNum, 'ENRIQUE E. ANGELES JR., PhD, CESO VI');
+$sheet->mergeCells('I' . $rowNum . ':J' . $rowNum);
+$sheet->setCellValue('I' . $rowNum, '___________________');
 
-// Left: Prepared by
-// $sheet->mergeCells('A' . $signRow . ':B' . $signRow);
-// $sheet->setCellValue('A' . $signRow, 'Prepared by:');
-// $sheet->getStyle('A' . $signRow)->getFont()->setBold(true);
+// APPLY STYLES INDIVIDUALLY TO AVOID THE COORDINATE ERROR
+$signatoryCells = ['B' . $rowNum, 'E' . $rowNum, 'I' . $rowNum];
 
-// $sheet->mergeCells('A' . ($signRow + 2) . ':B' . ($signRow + 2));
-// $sheet->setCellValue('A' . ($signRow + 2), '____________________________________');
-// $sheet->getStyle('A' . ($signRow + 2))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+foreach ($signatoryCells as $cell) {
+    $sheet->getStyle($cell)->getFont()->setBold(true)->setUnderline(true);
+    $sheet->getStyle($cell)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+}
 
-// $sheet->mergeCells('A' . ($signRow + 3) . ':B' . ($signRow + 3));
-// $sheet->setCellValue('A' . ($signRow + 3), 'Supply Officer/Inventory Custodian');
-// $sheet->getStyle('A' . ($signRow + 3))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-// $sheet->getStyle('A' . ($signRow + 3))->getFont()->setItalic(true);
+$rowNum++;
+// 1. Set the values and merge cells
+$sheet->setCellValue('B' . $rowNum, 'Signature over Printed Name of Inventory Committee Chair and Members');
 
-// // Right: Certified Correct
-// $sheet->mergeCells('C' . $signRow . ':D' . $signRow);
-// $sheet->setCellValue('C' . $signRow, 'Certified Correct:');
-// $sheet->getStyle('C' . $signRow)->getFont()->setBold(true);
+$sheet->mergeCells('E' . $rowNum . ':H' . $rowNum);
+$sheet->setCellValue('E' . $rowNum, 'Signature over Printed Name of Head of Agency/Entity or Authorized Representative');
 
-// $sheet->mergeCells('C' . ($signRow + 2) . ':D' . ($signRow + 2));
-// $sheet->setCellValue('C' . ($signRow + 2), '____________________________________');
-// $sheet->getStyle('C' . ($signRow + 2))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->mergeCells('I' . $rowNum . ':J' . $rowNum);
+$sheet->setCellValue('I' . $rowNum, 'Signature over Printed Name of COA Representative');
 
-// $sheet->mergeCells('C' . ($signRow + 3) . ':D' . ($signRow + 3));
-// $sheet->setCellValue('C' . ($signRow + 3), 'Accountant/Designated Representative');
-// $sheet->getStyle('C' . ($signRow + 3))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-// $sheet->getStyle('C' . ($signRow + 3))->getFont()->setItalic(true);
+// 2. Apply Styles (Font Size, Wrap Text, and Vertical Alignment)
+$footerStyle = [
+    'font' => ['size' => 10],
+    'alignment' => [
+        'wrapText' => true,
+        'vertical' => Alignment::VERTICAL_TOP,
+        'horizontal' => Alignment::HORIZONTAL_CENTER
+    ]
+];
 
-// $rowNum += 6;
+$sheet->getStyle("B$rowNum")->applyFromArray($footerStyle);
+$sheet->getStyle("E$rowNum:H$rowNum")->applyFromArray($footerStyle);
+$sheet->getStyle("I$rowNum:J$rowNum")->applyFromArray($footerStyle);
 
-// // --- Noted by ---
-// $sheet->mergeCells('B' . $rowNum . ':C' . $rowNum);
-// $sheet->setCellValue('B' . $rowNum, 'Noted by:');
-// $sheet->getStyle('B' . $rowNum)->getFont()->setBold(true);
-// $sheet->getStyle('B' . $rowNum)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+// 3. Set Row Height to Auto
+$sheet->getRowDimension($rowNum)->setRowHeight(-1);
 
-// $sheet->mergeCells('B' . ($rowNum + 2) . ':C' . ($rowNum + 2));
-// $sheet->setCellValue('B' . ($rowNum + 2), '____________________________________');
-// $sheet->getStyle('B' . ($rowNum + 2))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+// --- 5. Column Widths & Page Setup ---
+$widths = ['A' => 15, 'B' => 40, 'C' => 15, 'D' => 12, 'E' => 12, 'F' => 12, 'G' => 12, 'H' => 12, 'I' => 15, 'J' => 20];
+foreach ($widths as $col => $width) {
+    $sheet->getColumnDimension($col)->setWidth($width);
+}
 
-// $sheet->mergeCells('B' . ($rowNum + 3) . ':C' . ($rowNum + 3));
-// $sheet->setCellValue('B' . ($rowNum + 3), 'Schools Division Superintendent');
-// $sheet->getStyle('B' . ($rowNum + 3))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-// $sheet->getStyle('B' . ($rowNum + 3))->getFont()->setItalic(true);
-
-// --- Column Widths ---
-$sheet->getColumnDimension('A')->setWidth(15); // Stock No
-$sheet->getColumnDimension('B')->setWidth(60); // Item Description (wider)
-$sheet->getColumnDimension('C')->setWidth(15); // Unit
-$sheet->getColumnDimension('D')->setWidth(width: 20); // Quantity
-
-// --- Page Setup ---
-$sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_PORTRAIT);
+$sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE);
 $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4);
 $sheet->getPageSetup()->setFitToWidth(1);
 $sheet->getPageSetup()->setFitToHeight(0);
 
-// Repeat headers on each page
-$sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(8, 8);
-
-// --- Output ---
+// Output
 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-header('Content-Disposition: attachment;filename="RPCI_' . $monthName . '_' . $year . '.xlsx"');
+header('Content-Disposition: attachment;filename="RPCI_Report_' . $monthName . '_' . $year . '.xlsx"');
 header('Cache-Control: max-age=0');
 
 $writer = new Xlsx($spreadsheet);

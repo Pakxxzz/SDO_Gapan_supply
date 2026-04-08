@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Handle Add Item
     if ($data['action'] == "add") {
-        if (!isset($data['itemCode'], $data['desc'], $data['unit'], $data['minThreshold'], $data['maxThreshold'])) {
+        if (!isset($data['itemCode'], $data['desc'], $data['unit'], $data['cost'], $data['minThreshold'], $data['maxThreshold'])) {
             echo json_encode(["status" => "error", "message" => "Missing required fields"]);
             exit();
         }
@@ -106,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // $barPiece = trim($data['barPiece']);
         $desc = trim($data['desc']);
         $unit = trim($data['unit']);
+        $cost = floatval($data['cost']);
         // $principal = intval($data['principal']);
         $minThreshold = isset($data['minThreshold']) && $data['minThreshold'] !== '' ? intval($data['minThreshold']) : null;
         $maxThreshold = isset($data['maxThreshold']) && $data['maxThreshold'] !== '' ? intval($data['maxThreshold']) : null;
@@ -114,11 +115,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         try {
             // Insert new item into 'item' table
-            $additem = "INSERT INTO item (ITEM_CODE, ITEM_DESC, ITEM_UNIT, LAST_UPDATED_BY, ITEM_IS_ARCHIVED) VALUES (?, ?, ?, ?, 0)";
+            $additem = "INSERT INTO item (ITEM_CODE, ITEM_DESC, ITEM_UNIT, ITEM_COST, LAST_UPDATED_BY, ITEM_IS_ARCHIVED) VALUES (?, ?, ?, ?, ?, 0)";
             $stmt = $conn->prepare($additem);
             if (!$stmt)
                 throw new Exception("SQL error: " . $conn->error);
-            $stmt->bind_param("ssss", $itemCode, $desc, $unit, $user_id);
+            $stmt->bind_param("sssss", $itemCode, $desc, $unit, $cost, $user_id);
 
             if (!$stmt->execute())
                 throw new Exception("Failed to add item: " . $stmt->error);
@@ -194,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Handle Edit Item
     elseif ($data['action'] == "edit") {
-        if (!isset($data['itemCode'],/* $data['barCase'], $data['barPiece'],*/ $data['desc'], $data['unit'], /*$data['principal'],*/ $data['item_id'])) {
+        if (!isset($data['itemCode'],/* $data['barCase'], $data['barPiece'],*/ $data['desc'], $data['unit'], $data['cost'], /*$data['principal'],*/ $data['item_id'])) {
             echo json_encode(["status" => "error", "message" => "Missing required fields"]);
             exit();
         }
@@ -204,6 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // $barPiece = trim($data['barPiece']);
         $desc = trim($data['desc']);
         $unit = trim($data['unit']);
+        $cost = floatval($data['cost']);
         // $principal = trim($data['principal']);
         $minThreshold = isset($data['minThreshold']) && $data['minThreshold'] !== '' ? intval($data['minThreshold']) : null;
         $maxThreshold = isset($data['maxThreshold']) && $data['maxThreshold'] !== '' ? intval($data['maxThreshold']) : null;
@@ -212,18 +214,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         try {
             // Get old item data for logging
-            $oldStmt = $conn->prepare("SELECT ITEM_CODE, /*ITEM_BARCODE_CASE, ITEM_BARCODE_PIECE,*/ ITEM_DESC, ITEM_UNIT /*,VEN_ID*/ FROM item WHERE ITEM_ID = ?");
+            $oldStmt = $conn->prepare("SELECT ITEM_CODE, /*ITEM_BARCODE_CASE, ITEM_BARCODE_PIECE,*/ ITEM_DESC, ITEM_UNIT, ITEM_COST /*,VEN_ID*/ FROM item WHERE ITEM_ID = ?");
             $oldStmt->bind_param("i", $item_id);
             $oldStmt->execute();
             $oldData = $oldStmt->get_result()->fetch_assoc();
             $oldStmt->close();
 
             // Perform update
-            $updateQuery = "UPDATE item SET ITEM_CODE=?, ITEM_BARCODE_CASE=?, ITEM_BARCODE_PIECE=?, ITEM_DESC=?, ITEM_UNIT=?, VEN_ID=?, LAST_UPDATED_BY=? WHERE ITEM_ID=?";
+            $updateQuery = "UPDATE item SET ITEM_CODE=?, ITEM_BARCODE_CASE=?, ITEM_BARCODE_PIECE=?, ITEM_DESC=?, ITEM_UNIT=?, ITEM_COST=?, VEN_ID=?, LAST_UPDATED_BY=? WHERE ITEM_ID=?";
             $stmt = $conn->prepare($updateQuery);
             if (!$stmt)
                 throw new Exception("SQL error: " . $conn->error);
-            $stmt->bind_param("ssssssii", $itemCode, $null, $null, $desc, $unit, $null, $user_id, $item_id);
+            $stmt->bind_param("sssssssii", $itemCode, $null, $null, $desc, $unit, $cost, $null, $user_id, $item_id);
 
             if (!$stmt->execute())
                 throw new Exception("Failed to update item: " . $stmt->error);

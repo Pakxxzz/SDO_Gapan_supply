@@ -383,7 +383,8 @@ $dashboardData = [
         <div class="p-4 md:p-6 overflow-y-auto" style="height: calc(100dvh - 80px);">
             <!-- Welcome Section -->
             <div class="mb-6">
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Welcome back, <?= htmlspecialchars($_SESSION['FNAME']) ?>!</h1>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Welcome back,
+                    <?= htmlspecialchars($_SESSION['FNAME']) ?>!</h1>
                 <p class="text-gray-600">Here's what's happening with your inventory today.</p>
             </div>
 
@@ -704,6 +705,7 @@ $dashboardData = [
     </div> -->
 
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let charts = {};
         let updateInterval;

@@ -12,7 +12,7 @@ if (!empty($search)) {
     $searchTerm = $conn->real_escape_string($search);
     $whereClause .= " AND (
         item.ITEM_CODE LIKE '%$searchTerm%' OR
-        item.ITEM_DESC LIKE '%$searchTerm%' OR
+        item.ITEM_DESC LIKE '%$searchTerm%' OR 
         item.ITEM_UNIT LIKE '%$searchTerm%'
     )";
 }
@@ -150,6 +150,7 @@ if ($maxNumber) {
                         <th class="px-4 py-2 text-left">Stock No.</th>
                         <th class="px-4 py-2 text-left">Item Description</th>
                         <th class="px-4 py-2 text-left">Item Unit</th>
+                        <th class="px-4 py-2 text-left">Unit Cost</th>
                         <th class="px-4 py-2 text-left">Min Threshold</th>
                         <th class="px-4 py-2 text-left">Max Threshold</th>
                         <th class="px-4 py-2 text-left">Action</th>
@@ -162,6 +163,7 @@ if ($maxNumber) {
                                 <td class="px-4 py-2"><?= htmlspecialchars($row['ITEM_CODE']) ?></td>
                                 <td class="px-4 py-2"><?= htmlspecialchars($row['ITEM_DESC']) ?></td>
                                 <td class="px-4 py-2"><?= htmlspecialchars($row['ITEM_UNIT']) ?></td>
+                                <td class="px-4 py-2"><?= htmlspecialchars(number_format($row['ITEM_COST'], 2)) ?></td>
                                 <td class="px-4 py-2">
                                     <?= htmlspecialchars(number_format($row['MIN_THRESHOLD'])) ?? 'Not set' ?>
                                 </td>
@@ -268,6 +270,10 @@ if ($maxNumber) {
                 <div class="mb-3">
                     <label class="block font-medium" for="unit">Item Unit</label>
                     <input type="text" id="unit" name="unit" class="w-full border rounded px-3 py-2" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block font-medium" for="cost">Unit Cost</label>
+                    <input type="number" id="cost" name="cost" class="w-full border rounded px-3 py-2" required step="0.01" min="0">
                 </div>
 
 

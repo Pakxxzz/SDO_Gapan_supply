@@ -23,6 +23,7 @@ $sql = "SELECT
             stock_out.SO_QUANTITY,
             stock_out.SO_REMARKS,
             stock_out.ITEM_ID,
+            stock_out.SO_UNIT_COST,
             COALESCE((
                 SELECT SUM(RETURN_QUANTITY) 
                 FROM item_return 
@@ -44,8 +45,6 @@ $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 $spreadsheet->getDefaultStyle()->getFont()->setName('Times New Roman');
 // Center the page content
-$sheet->getPageSetup()->setHorizontalCentered(true);
-$sheet->getPageSetup()->setVerticalCentered(true);
 use PhpOffice\PhpSpreadsheet\Worksheet\HeaderFooter;
 
 // Set Footer
@@ -58,14 +57,14 @@ $sheet->getHeaderFooter()->setOddFooter(
 $sheet->setCellValue('H1', 'Appendix 64')->getStyle('H1')->getFont()->setItalic(true)->setSize(18);
 $sheet->mergeCells('A3:I3');
 $sheet->setCellValue('A3', 'REPORT OF SUPPLIES AND MATERIALS ISSUED');
-$sheet->getStyle('A3')->getFont()->setBold(true)->setSize(12);
+$sheet->getStyle('A3')->getFont()->setBold(true)->setSize(14);
 $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
 $sheet->setCellValue('A4', 'Entity Name: Department of Education, SDO Gapan City');
 $sheet->setCellValue('G4', 'Serial No. : _______________________');
 $sheet->setCellValue('A5', 'Fund Cluster: __________________________________');
 $sheet->setCellValue('G5', "Date : $monthName $year");
-$sheet->getStyle('A4:G5')->getFont()->setBold(true)->setSize(10);
+$sheet->getStyle('A4:G5')->getFont()->setBold(true)->setSize(11);
 
 // --- Main Table Headers ---
 $sheet->setCellValue('A7', 'To be filled up by the Supply and/or Property Division/Unit')->getStyle('A7')->getFont()->setItalic(true);
@@ -79,7 +78,7 @@ $headers = ['RIS No.', 'Responsibility Center Code', 'Stock No.', 'Item', 'Unit'
 $sheet->fromArray($headers, NULL, 'A8');
 
 $styleHeader = [
-    'font' => ['bold' => true, 'size' => 9],
+    'font' => ['bold' => true, 'size' => 11],
     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'wrapText' => true],
     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
 ];
@@ -105,17 +104,19 @@ while ($row = $result->fetch_assoc()) {
     $sheet->setCellValue('D' . $rowNum, $row['ITEM_DESC']);
     $sheet->setCellValue('E' . $rowNum, $row['ITEM_UNIT']);
     $sheet->setCellValue('F' . $rowNum, $net_issued);
-    $sheet->setCellValue('G' . $rowNum, ''); // Unit Cost (Blank)
-    $sheet->setCellValue('H' . $rowNum, ''); // Amount (Blank)
+    $sheet->setCellValue('G' . $rowNum, isset($row['SO_UNIT_COST']) ? $row['SO_UNIT_COST'] : '0'); // Unit Cost
+    $sheet->setCellValue('H' . $rowNum, isset($row['SO_UNIT_COST']) ? $row['SO_UNIT_COST'] * $net_issued : 0); // Amount
 
     $sheet->getStyle("A$rowNum:H$rowNum")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
     $sheet->getStyle("A$rowNum:H$rowNum")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle("A$rowNum")->getFont()->setBold(true)->setSize(11);
 
     // Grouping for Recapitulation
     $itemCode = $row['ITEM_CODE'];
     if (!isset($recapData[$itemCode])) {
         $recapData[$itemCode] = [
             'desc' => $row['ITEM_DESC'],
+            'unit_cost' => $row['SO_UNIT_COST'],
             'qty' => 0,
             'original_qty' => 0,
             'returned_qty' => 0
@@ -155,7 +156,7 @@ $sheet->fromArray($recapHeaders, NULL, 'B' . $rowNum);
 
 // Style Recap Headers
 $styleRecapHeader = [
-    'font' => ['bold' => true, 'size' => 9],
+    'font' => ['bold' => true, 'size' => 11],
     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
 ];
@@ -164,14 +165,16 @@ $sheet->getStyle("F$rowNum:H$rowNum")->applyFromArray($styleRecapHeader);
 $sheet->getStyle("A$rowNum")->getBorders()->getLeft()->setBorderStyle(Border::BORDER_THIN);
 $rowNum++;
 
+ksort($recapData);
+
 // Populate Recap Rows
 foreach ($recapData as $code => $data) {
     $sheet->setCellValue('B' . $rowNum, $code);
     $sheet->setCellValue('C' . $rowNum, $data['qty']);
     $sheet->setCellValue('D' . $rowNum, ''); // Unit Cost (Blank)
     $sheet->setCellValue('E' . $rowNum, ''); // Unit Cost (Blank)
-    $sheet->setCellValue('F' . $rowNum, ''); // Unit Cost (Blank)
-    $sheet->setCellValue('G' . $rowNum, ''); // Total Cost (Blank)
+    $sheet->setCellValue('F' . $rowNum, '₱' . isset($data['unit_cost']) ? $data['unit_cost'] : '0'); // Unit Cost (Blank)
+    $sheet->setCellValue('G' . $rowNum, '₱' . isset($data['unit_cost']) ? $data['unit_cost'] * $data['qty'] : 0); // Total Cost (Blank)
     $sheet->setCellValue('H' . $rowNum, ''); // UACS Object Code (Blank)
 
     // Apply borders to each row
@@ -286,9 +289,12 @@ $sheet->getColumnDimension('F')->setWidth(15); // quantity
 $sheet->getColumnDimension('G')->setWidth(15); // Unit Cost 
 $sheet->getColumnDimension('H')->setWidth(25); //  Amount
 
+$sheet->getPageSetup()->setHorizontalCentered(true);
+$sheet->getPageSetup()->setVerticalCentered(true);
+
 // Landscape and Fit to Page
 $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE);
-$sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
+$sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_LEGAL);
 $sheet->getPageSetup()->setFitToWidth(1);
 $sheet->getPageSetup()->setFitToHeight(0);
 

@@ -7,6 +7,7 @@ function editItem(item) {
   document.getElementById("itemCode").value = item.ITEM_CODE;
   document.getElementById("desc").value = item.ITEM_DESC;
   document.getElementById("unit").value = item.ITEM_UNIT;
+  document.getElementById("cost").value = item.ITEM_COST;
 
   // Load threshold data
   loadItemThresholds(item.ITEM_ID);
@@ -92,6 +93,7 @@ document
       // barPiece: document.getElementById("barPiece").value.trim(),
       desc: document.getElementById("desc").value.trim(),
       unit: document.getElementById("unit").value.trim(),
+      cost: document.getElementById("cost").value.trim(),
       // principal: document.getElementById("principal").value.trim(),
       minThreshold: document.getElementById("minThreshold").value.trim(),
       maxThreshold: document.getElementById("maxThreshold").value.trim(),
@@ -103,6 +105,7 @@ document
       !formData.itemCode ||
       !formData.desc ||
       !formData.unit ||
+      !formData.cost ||
       formData.minThreshold === "" ||
       formData.maxThreshold === ""
     ) {

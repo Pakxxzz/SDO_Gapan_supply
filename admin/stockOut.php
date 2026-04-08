@@ -249,6 +249,29 @@ $itemResult->data_seek(0);
             border-radius: 9999px;
             margin-left: 8px;
         }
+
+        /* Prevent the table container from clipping the dropdown */
+        .table-container {
+            padding-bottom: 30px;
+            /* Gives room for the bottom-most dropdowns */
+        }
+
+        /* Ensure the dropdown always stays on top of subsequent table rows */
+        tr:hover {
+            z-index: 10;
+            position: relative;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        /* Desktop-friendly dropdown positioning */
+        @media (min-width: 640px) {
+            .dropdown-menu {
+                min-width: 14rem;
+            }
+        }
     </style>
 </head>
 
@@ -341,65 +364,53 @@ $itemResult->data_seek(0);
                                 <td class="px-4 py-2"><?= $batch['TOTAL_QUANTITY'] ?></td>
                                 <td class="px-4 py-2"><?= date('M j, Y \a\t g:i a', strtotime($batch['CREATED_AT'])) ?></td>
                                 <td class="px-4 py-2"><?= htmlspecialchars($createdBy) ?></td>
-                                <td class="action-column px-4 py-2">
-                                    <div class=" inline-block text-left" x-data="{ open: false }">
-                                        <!-- Dropdown button - simpler design -->
+                                <td class="px-4 py-2 text-right">
+                                    <div x-data="{ open: false }" class="relative inline-block text-left">
                                         <button @click="open = !open" @click.away="open = false"
-                                            class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-300 text-gray-600 transition-colors">
-                                            <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                                            class="flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-all duration-200 focus:outline-none">
+                                            <i class='bx bx-dots-vertical-rounded text-xl'></i>
                                         </button>
 
-                                        <!-- Dropdown menu - absolute positioned -->
                                         <div x-show="open" x-cloak x-transition:enter="transition ease-out duration-100"
                                             x-transition:enter-start="transform opacity-0 scale-95"
                                             x-transition:enter-end="transform opacity-100 scale-100"
                                             x-transition:leave="transition ease-in duration-75"
                                             x-transition:leave-start="transform opacity-100 scale-100"
                                             x-transition:leave-end="transform opacity-0 scale-95"
-                                            class="absolute right-0 z-50 mr-5 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5"
-                                            style="position: absolute; min-width: 12rem;">
+                                            class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-[100] overflow-hidden">
 
-                                            <div class="py-1">
-                                                <!-- View Details -->
+                                            <div class="py-1 text-sm text-gray-700">
                                                 <button onclick="viewBatch('<?= htmlspecialchars($risNo) ?>')"
-                                                    class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100">
-                                                    <i data-lucide="eye" class="w-4 h-4 mr-3 text-green-600"></i>
+                                                    class="flex items-center w-full px-4 py-2 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                                                    <i class='bx bx-show mr-3 text-lg text-blue-500'></i>
                                                     View Details
                                                 </button>
 
-                                                <!-- Edit -->
                                                 <button onclick="editBatch('<?= htmlspecialchars($risNo) ?>')"
-                                                    class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100">
-                                                    <i data-lucide="edit" class="w-4 h-4 mr-3 text-blue-600"></i>
-                                                    Edit
+                                                    class="flex items-center w-full px-4 py-2 hover:bg-amber-50 hover:text-amber-700 transition-colors">
+                                                    <i class='bx bx-edit-alt mr-3 text-lg text-amber-500'></i>
+                                                    Edit Batch
                                                 </button>
-                                            </div>
 
-                                            <div class="border-t border-gray-100"></div>
+                                                <div class="border-t border-gray-100 my-1"></div>
 
-                                            <div class="py-1">
-                                                <!-- Return Items -->
                                                 <button onclick="returnItems('<?= htmlspecialchars($risNo) ?>')"
-                                                    class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100">
-                                                    <i data-lucide="rotate-ccw" class="w-4 h-4 mr-3 text-orange-600"></i>
-                                                    Return Items
+                                                    class="flex items-center w-full px-4 py-2 hover:bg-orange-50 hover:text-orange-700 transition-colors">
+                                                    <i class='bx bx-undo mr-3 text-lg text-orange-500'></i>
+                                                    Process Return
                                                 </button>
 
-                                                <!-- View Returns -->
                                                 <button onclick="viewReturns('<?= htmlspecialchars($risNo) ?>')"
-                                                    class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100">
-                                                    <i data-lucide="history" class="w-4 h-4 mr-3 text-indigo-600"></i>
-                                                    View Returns
+                                                    class="flex items-center w-full px-4 py-2 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
+                                                    <i class='bx bx-history mr-3 text-lg text-indigo-500'></i>
+                                                    Return History
                                                 </button>
-                                            </div>
 
-                                            <div class="border-t border-gray-100"></div>
+                                                <div class="border-t border-gray-100 my-1"></div>
 
-                                            <div class="py-1">
-                                                <!-- Export to Excel -->
                                                 <button onclick="exportToExcel('<?= htmlspecialchars($risNo) ?>')"
-                                                    class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100">
-                                                    <i data-lucide="file-spreadsheet" class="w-4 h-4 mr-3 text-purple-600"></i>
+                                                    class="flex items-center w-full px-4 py-2 hover:bg-green-50 hover:text-green-700 transition-colors">
+                                                    <i class='bx bx-file mr-3 text-lg text-green-600'></i>
                                                     Export to Excel
                                                 </button>
                                             </div>
@@ -469,7 +480,7 @@ $itemResult->data_seek(0);
             </div>
 
             <p class="text-center text-xs text-gray-500 mt-3">
-                Results: <?= $offset + 1 ?> - <?= min($offset + $limit, $totalItem) ?> of <?= $totalItem ?> 
+                Results: <?= $offset + 1 ?> - <?= min($offset + $limit, $totalItem) ?> of <?= $totalItem ?>
                 <?php if (!empty($search)): ?>
                     for "<?= htmlspecialchars($search) ?>"
                 <?php endif; ?>

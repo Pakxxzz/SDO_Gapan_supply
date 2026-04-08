@@ -65,6 +65,7 @@ $sql = "SELECT
             item.ITEM_CODE,
             item.ITEM_DESC,
             item.ITEM_UNIT,
+            item.ITEM_COST,
             inventory.INV_QUANTITY_PIECE,
             it.MIN_THRESHOLD,
             it.MAX_THRESHOLD
@@ -219,6 +220,8 @@ if ($limit != 10)
                         <th class="px-4 py-2 text-left">Item Description</th>
                         <th class="px-4 py-2 text-left">Unit</th>
                         <th class="px-4 py-2 text-left">Quantity</th>
+                        <th class="px-4 py-2 text-left">Unit Cost</th>
+                        <th class="px-4 py-2 text-left">Total Amount</th>
                         <th class="px-4 py-2 text-left">Threshold</th>
                         <th class="px-4 py-2 text-left">Status</th>
                     </tr>
@@ -275,6 +278,8 @@ if ($limit != 10)
                                 <td class="px-4 py-3"><?= htmlspecialchars($row['ITEM_UNIT'] ?: 'N/A') ?>
                                 </td>
                                 <td class="px-4 py-3"><?= number_format($quantity) ?></td>
+                                <td class="px-4 py-3">₱<?= htmlspecialchars(number_format($row['ITEM_COST'], 2)) ?></td>
+                                <td class="px-4 py-3">₱<?= htmlspecialchars(number_format($row['ITEM_COST'] * $quantity, 2)) ?>
                                 <td class="px-4 py-3">
                                     <span class="<?= $difference_class ?>">
                                         <?= $difference_text ?>

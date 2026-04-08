@@ -9,7 +9,7 @@ if ($_SESSION['role'] !== 'Admin' || !isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id']; // Fixed: Uppercase 'USER_ID'
 $currentTime = time();
-$today = date('Y-m-d', $currentTime);
+$today = date('Y-m-1');
 
 // Check if baseline already exists (prevent duplicate submissions)
 $check = $conn->prepare("SELECT COUNT(*) FROM baseline_inventory WHERE DATE_SNAPSHOT = ?");
@@ -22,7 +22,7 @@ if ($check->get_result()->fetch_row()[0] > 0) {
 
 // Fetch all active items
 $items = mysqli_query($conn, "
-    SELECT item.ITEM_ID, inventory.INV_QUANTITY_PIECE
+    SELECT item.ITEM_ID, inventory.INV_QUANTITY_PIECE, item.ITEM_COST
     FROM item
     INNER JOIN inventory ON item.ITEM_ID = inventory.ITEM_ID
     WHERE item.ITEM_IS_ARCHIVED = 0
@@ -36,16 +36,17 @@ if (!$items) {
 if (mysqli_num_rows($items) > 0) {
     $stmt = $conn->prepare("
         INSERT INTO baseline_inventory 
-        (ITEM_ID, USER_ID, SYSTEM_QUANTITY, DATE_SNAPSHOT)
-        VALUES (?, ?, ?, ?)
+        (ITEM_ID, USER_ID, SYSTEM_QUANTITY, HISTORICAL_UNIT_COST, DATE_SNAPSHOT)
+        VALUES (?, ?, ?, ?, ?)
     ");
 
     while ($item = mysqli_fetch_assoc($items)) {
         $stmt->bind_param(
-            "iiis",
+            "iiiss",
             $item['ITEM_ID'],
             $user_id,
             $item['INV_QUANTITY_PIECE'],
+            $item['ITEM_COST'],
             $today
         );
         $stmt->execute();

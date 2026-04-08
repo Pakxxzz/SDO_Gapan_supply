@@ -105,7 +105,7 @@ if ($data['action'] == "add_batch") {
     $off_id = intval($data['off_id']);
     $items = $data['items'];
     $ris_no = generateRISNumber($conn);
-    
+
 
     $conn->begin_transaction();
 
@@ -129,19 +129,29 @@ if ($data['action'] == "add_batch") {
             if ($inv_quantity < $quantity) {
                 throw new Exception("Insufficient inventory for {$item_code} - {$item_desc}. Available: {$inv_quantity}");
             }
+
         }
 
         // Insert all items
-        $insertQuery = "INSERT INTO stock_out (SO_RIS_NO, ITEM_ID, SO_QUANTITY, SO_REMARKS, OFF_ID, CREATED_BY) 
-                       VALUES (?, ?, ?, ?, ?, ?)";
+        $insertQuery = "INSERT INTO stock_out (SO_RIS_NO, ITEM_ID, SO_QUANTITY, SO_UNIT_COST, SO_REMARKS, OFF_ID, CREATED_BY) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($insertQuery);
 
         foreach ($items as $item) {
+            // When inserting into stock_out
+            $itemQuery = "SELECT ITEM_COST FROM item WHERE ITEM_ID = ?";
+            $priceStmt = $conn->prepare($itemQuery);
+            $priceStmt->bind_param("i", $item_id);
+            $priceStmt->execute();
+            $priceResult = $priceStmt->get_result();
+            $itemData = $priceResult->fetch_assoc();
+            $current_cost = $itemData['ITEM_COST'];
+
             $item_id = intval($item['item_id']);
             $quantity = intval($item['quantity']);
             $remarks = trim($item['remarks']);
 
-            $stmt->bind_param("siisii", $ris_no, $item_id, $quantity, $remarks, $off_id, $user_id);
+            $stmt->bind_param("siissii", $ris_no, $item_id, $quantity, $current_cost, $remarks, $off_id, $user_id);
             if (!$stmt->execute()) {
                 throw new Exception("Failed to insert stock out record");
             }
